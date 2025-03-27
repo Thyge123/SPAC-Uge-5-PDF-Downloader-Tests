@@ -449,31 +449,6 @@ class PDF_Downloader:
         print("\nProgram completed successfully.")
 
 
-# Keep the original helper functions for backward compatibility
-def get_existing_downloads():
-    downloader = PDF_Downloader()
-    return downloader.get_existing_downloads()
-
-def download_file(index, row, download_errors):
-    downloader = PDF_Downloader()
-    return downloader.download_file(index, row, download_errors)
-
-def download_pdfs(download_queue, download_errors):
-    downloader = PDF_Downloader()
-    return downloader.download_pdfs(download_queue, download_errors)
-
-def create_output_report(download_queue, download_errors):
-    downloader = PDF_Downloader()
-    return downloader.create_output_report(download_queue, download_errors)
-
-def update_metadata(download_queue, reports_data):
-    downloader = PDF_Downloader()
-    return downloader.update_metadata(download_queue, reports_data)
-
-def upload_to_drive():
-    downloader = PDF_Downloader()
-    return downloader.upload_to_drive()
-
 # MAIN PROGRAM
 def main():
     downloader = PDF_Downloader()
