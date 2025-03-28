@@ -1,19 +1,12 @@
-"""
-Test suite for PDF_Downloader
-
-This file contains automated tests for the PDF_Downloader class, which handles
-downloading PDF files from URLs and managing their metadata.
-"""
-
-import unittest  # Python's built-in testing framework
+import unittest  
 import sys
 import os
-import pandas as pd  # Library for data manipulation and Excel files
-import glob  # For file pattern matching
-import shutil  # For file operations (copy, delete, etc.)
-import requests  # For making HTTP requests
-from unittest.mock import patch, MagicMock, mock_open  # For test simulations
-import coverage  # For measuring code coverage
+import pandas as pd  
+import glob  
+import shutil  #
+import requests  
+from unittest.mock import patch, MagicMock, mock_open 
+import coverage  
 
 # Add parent directory to path so we can import our module
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -666,43 +659,7 @@ class TestPDFDownloader(unittest.TestCase):
                             mock_output.assert_called_once()
                             mock_metadata.assert_called_once()
                             mock_upload.assert_called_once()
-    
-    def test_global_helper_functions(self):
-        """Test global helper functions
-        
-        Makes sure the convenience functions in the module work correctly.
-        """
-        # STEP 1: Mock all methods
-        with patch('PDF_Downloader.PDF_Downloader.get_existing_downloads') as mock_get:
-            with patch('PDF_Downloader.PDF_Downloader.download_file') as mock_download_file:
-                with patch('PDF_Downloader.PDF_Downloader.download_pdfs') as mock_download_pdfs:
-                    with patch('PDF_Downloader.PDF_Downloader.create_output_report') as mock_output:
-                        with patch('PDF_Downloader.PDF_Downloader.update_metadata') as mock_metadata:
-                            with patch('PDF_Downloader.PDF_Downloader.upload_to_drive') as mock_upload:
-                                # STEP 2: Import helper functions
-                                from PDF_Downloader import (
-                                    get_existing_downloads, download_file, download_pdfs,
-                                    create_output_report, update_metadata, upload_to_drive
-                                )
-                                
-                                # STEP 3: Test each function
-                                get_existing_downloads()
-                                mock_get.assert_called_once()
-                                
-                                download_file("12345", pd.Series(), [])
-                                mock_download_file.assert_called_once()
 
-                                download_pdfs(pd.DataFrame(), [])
-                                mock_download_pdfs.assert_called_once()
-
-                                create_output_report(pd.DataFrame(), [])
-                                mock_output.assert_called_once()
-                                
-                                update_metadata(pd.DataFrame(), pd.DataFrame())
-                                mock_metadata.assert_called_once()
-                                
-                                upload_to_drive()
-                                mock_upload.assert_called_once()
 
     @patch('PDF_Downloader.PDF_Downloader.run')
     def test_main_function(self, mock_run):

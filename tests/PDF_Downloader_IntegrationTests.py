@@ -7,8 +7,7 @@ import logging  # For structured logging
 import time
 from pathlib import Path  # Object-oriented filesystem paths
 
-# Add parent directory to path so we can import our module
-# This allows us to import from the parent directory of this test file
+# Add parent directory to path so we can import PDF_Downloader module
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Import the module we want to test
@@ -23,11 +22,7 @@ class PDFDownloaderIntegrationTests(unittest.TestCase):
     """Integration tests for PDF_Downloader using real files."""
 
     def setUp(self):
-        """Set up test environment with actual files and directories.
-        
-        This method runs before each test method and prepares the
-        test environment with necessary directories and files.
-        """
+        """Set up test environment with actual files and directories."""
         # Create test directory structure
         self.test_dir = os.path.join(os.path.dirname(__file__), 'integration_test_data')
         self.download_dir = os.path.join(self.test_dir, 'Downloads')
@@ -58,47 +53,29 @@ class PDFDownloaderIntegrationTests(unittest.TestCase):
         self.downloader.metadata_path = self.metadata_path
         
         # Limit downloads to make tests faster
-        # In real usage, these values would likely be higher
         self.downloader.max_downloads = 2
         self.downloader.max_concurrent_threads = 2
         
-        logger.info(f"Test environment set up at: {self.test_dir}")
-
-    def tearDown(self):
-        """Clean up test files and directories.
-        
-        This method runs after each test method and ensures
-        we don't leave test files scattered around.
-        """
-        if os.path.exists(self.test_dir):
-            try:
-                shutil.rmtree(self.test_dir)  # Remove the entire test directory tree
-                logger.info(f"Test directory removed: {self.test_dir}")
-            except Exception as e:
-                logger.warning(f"Error removing test directory: {e}")
+        logger.info(f"Test environment set up at: {self.test_dir}\n")
+        logger.info("--------------------------------------------------\n")
 
     def create_test_reports_file(self):
-        """Create a test reports Excel file with real, reliable PDF URLs.
-        
-        This method prepares a sample dataset with URLs pointing to 
-        publicly available PDF files that should be stable over time.
-        """
+        """Create a test reports Excel file with real, reliable PDF URLs."""
         # Use reliable PDF URLs that are likely to remain available
         test_data = {
-            'BRnum': ['TEST001', 'TEST002', 'TEST003', 'TEST004'],  # Business Report numbers
+            'BRnum': ['TEST001', 'TEST002', 'TEST003', 'TEST004'], 
             'Pdf_URL': [
-                'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',  # W3C test PDF
-                'https://www.adobe.com/pdf/pdfs/ISO32000-1PublicPatentLicense.pdf',  # Adobe PDF
-                'https://www.hq.nasa.gov/alsj/a17/A17_FlightPlan.pdf',  # NASA PDF
+                'http://cdn12.a1.net/m/resources/media/pdf/A1-Umwelterkl-rung-2016-2017.pdf', 
+                'https://www.hkexnews.hk/listedco/listconews/sehk/2017/0512/ltn20170512165.pdf',  
+                'https://ebooks.exakta.se/aak/2017/hallbarhetsrapport_2016_2017_en/pubData/source/aak_sustainability_report_2016_2017_ebook.pdf',  
                 None  # Test with missing URL
             ],
             'Report Html Address': [
                 None,
                 None,
                 None,
-                'https://www.w3.org/TR/WCAG20/'  # Test with HTML address instead of PDF
-            ],
-            'Year': [2020, 2021, 2022, 2023]
+                'https://www.ab-science.com/file_bdd/content/1480493978_DDRVF.pdf' 
+            ], 
         }
         
         # Create the Excel file with pandas
@@ -106,16 +83,11 @@ class PDFDownloaderIntegrationTests(unittest.TestCase):
         logger.info(f"Created test reports file: {self.reports_path}")
 
     def create_test_metadata_file(self):
-        """Create a test metadata Excel file.
-        
-        The metadata file tracks which PDFs have been downloaded.
-        Initially, no PDFs have been downloaded ('No' status).
-        """
+        """Create a test metadata Excel file."""
         # Initial metadata with no downloads
         test_data = {
             'BRnum': ['TEST001', 'TEST002'],
             'pdf_downloaded': ['No', 'No'],  # Initial status is 'No' (not downloaded)
-            'Year': [2020, 2021]
         }
         
         # Create the Excel file
@@ -123,143 +95,116 @@ class PDFDownloaderIntegrationTests(unittest.TestCase):
         logger.info(f"Created test metadata file: {self.metadata_path}")
 
     def test_excel_file_reading(self):
-        """Test that the downloader can read Excel files correctly.
+        """Test that the downloader can read Excel files correctly."""
+        # Read the reports file using pandas directly
+        reports_data = pd.read_excel(self.reports_path)
         
-        This test verifies that the application can properly read and process
-        the Excel files that contain URL data and metadata.
-        """
-        # Custom test class to isolate file reading functionality
-        class ExcelReader(PDF_Downloader):
-            def run(self2):
-                # Read the reports file
-                reports_data = pd.read_excel(self2.reports_path)
-                
-                # Read the metadata file
-                metadata = pd.read_excel(self2.metadata_path)
-                
-                # Return information for verification
-                return {
-                    'reports_count': len(reports_data),  # Number of reports
-                    'reports_columns': list(reports_data.columns),  # Column names in reports
-                    'metadata_count': len(metadata),  # Number of metadata records
-                    'metadata_columns': list(metadata.columns)  # Column names in metadata
-                }
-        
-        # Create and configure the reader
-        reader = ExcelReader()
-        reader.reports_path = self.reports_path
-        reader.metadata_path = self.metadata_path
-        
-        # Run the reader and get results
-        result = reader.run()
+        # Read the metadata file using pandas directly
+        metadata = pd.read_excel(self.metadata_path)
         
         # Verify that reading was successful with assertions
-        self.assertEqual(result['reports_count'], 4, "Should read 4 reports")
-        self.assertIn('BRnum', result['reports_columns'], "Reports should have BRnum column")
-        self.assertIn('Pdf_URL', result['reports_columns'], "Reports should have Pdf_URL column")
+        self.assertEqual(len(reports_data), 4, "Should read 4 reports")
+        self.assertIn('BRnum', reports_data.columns, "Reports should have BRnum column")
+        self.assertIn('Pdf_URL', reports_data.columns, "Reports should have Pdf_URL column")
         
-        self.assertEqual(result['metadata_count'], 2, "Should read 2 metadata records")
-        self.assertIn('pdf_downloaded', result['metadata_columns'], "Metadata should have pdf_downloaded column")
+        self.assertEqual(len(metadata), 2, "Should read 2 metadata records")
+        self.assertIn('pdf_downloaded', metadata.columns, "Metadata should have pdf_downloaded column")
         
-        logger.info("Excel file reading test passed successfully")
+        logger.info("Excel file reading test passed successfully\n")
+        logger.info("--------------------------------------------------\n")
 
-    def test_url_processing(self):
-        """Test URL extraction and processing from input files.
+    def test_get_existing_downloads(self):
+        """Test the get_existing_downloads method."""
+        # Create test files in the download directory
+        test_files = ['TEST001.pdf', 'TEST002.pdf']
+        for file in test_files:
+            with open(os.path.join(self.download_dir, file), 'w') as f:
+                f.write('Test PDF content')
         
-        This test verifies that the application correctly processes
-        different types of URLs (valid, invalid, missing) from the input files.
-        """
-        # Create a more complex test file with various URL types
-        url_test_data = {
-            'BRnum': ['URL001', 'URL002', 'URL003', 'URL004', 'URL005'],
-            'Pdf_URL': [
-                'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',  # Standard URL
-                'https://example.com/test.pdf',  # URL that won't resolve
-                None,  # Missing URL
-                'https://www.adobe.com/pdf/pdfs/ISO32000-1PublicPatentLicense.pdf',  # Another valid URL
-                'not-a-valid-url'  # Malformed URL
-            ],
-            'Report Html Address': [
-                None,
-                None,
-                'https://www.w3.org/TR/WCAG20/',  # HTML URL
-                None,
-                None
-            ],
-            'Year': [2020, 2021, 2022, 2023, 2024]
-        }
+        # Call the method directly
+        existing_downloads = self.downloader.get_existing_downloads()
         
-        # Create the test file
-        url_test_path = os.path.join(self.test_dir, 'url_test.xlsx')
-        pd.DataFrame(url_test_data).to_excel(url_test_path, index=False)
+        # Verify results
+        self.assertEqual(len(existing_downloads), 2, "Should find 2 existing downloads")
+        self.assertIn('TEST001', existing_downloads, "Should find TEST001.pdf")
+        self.assertIn('TEST002', existing_downloads, "Should find TEST002.pdf")
         
-        # Create a specialized URL processor that extends PDF_Downloader
-        class URLProcessor(PDF_Downloader):
-            def run(self2):
-                # Read the input file
-                reports_data = pd.read_excel(url_test_path)
-                
-                # Initialize containers for different URL types
-                valid_pdf_urls = []
-                valid_html_urls = []
-                invalid_urls = []
-                missing_urls = []
-                
-                # Analyze each URL row by row
-                for _, row in reports_data.iterrows():
-                    br_num = row['BRnum']
-                    pdf_url = row.get('Pdf_URL')
-                    html_url = row.get('Report Html Address')
-                    
-                    # Process PDF URLs
-                    if pd.notna(pdf_url):  # If PDF URL is not NA (not missing)
-                        if pdf_url.startswith('http'):  # Basic URL validation
-                            valid_pdf_urls.append((br_num, pdf_url))
-                        else:
-                            invalid_urls.append((br_num, pdf_url))
-                    # Process HTML URLs if PDF URL is missing
-                    elif pd.notna(html_url):
-                        if html_url.startswith('http'):  # Basic URL validation
-                            valid_html_urls.append((br_num, html_url))
-                        else:
-                            invalid_urls.append((br_num, html_url))
-                    # Both URLs are missing
-                    else:
-                        missing_urls.append(br_num)
-                
-                # Return results for verification
-                return {
-                    'valid_pdf_count': len(valid_pdf_urls),
-                    'valid_html_count': len(valid_html_urls),
-                    'invalid_count': len(invalid_urls),
-                    'missing_count': len(missing_urls),
-                    'valid_pdf_urls': valid_pdf_urls,
-                    'valid_html_urls': valid_html_urls
-                }
+        logger.info("get_existing_downloads test passed successfully\n")
+        logger.info("--------------------------------------------------\n")
+
+    def test_url_extraction(self):
+        """Test URL extraction from input files."""
+        # Read the Excel file directly
+        reports_data = pd.read_excel(self.reports_path, index_col=self.downloader.id_column)
         
-        # Run the processor
-        processor = URLProcessor()
-        result = processor.run()
+        # Check for valid download URLs
+        has_valid_url = (reports_data.Pdf_URL.notnull()) | (reports_data['Report Html Address'].notnull())
+        reports_with_urls = reports_data[has_valid_url]
         
-        # Verify URL processing with assertions
-        self.assertEqual(result['valid_pdf_count'], 3, "Should find 3 valid PDF URLs")
-        self.assertEqual(result['valid_html_count'], 1, "Should find 1 valid HTML URL")
-        self.assertEqual(result['invalid_count'], 1, "Should find 1 invalid URL")
-        self.assertEqual(result['missing_count'], 0, "Should find 0 records with missing URLs")
+        # Verify URL extraction
+        self.assertEqual(len(reports_with_urls), 4, "Should find 4 reports with URLs")
         
-        # Verify the first valid PDF URL details
-        first_url = result['valid_pdf_urls'][0]
-        self.assertEqual(first_url[0], 'URL001', "First valid URL should be from URL001")
+        # Count primary vs. secondary URLs
+        primary_urls = reports_data[reports_data.Pdf_URL.notnull()]
+        secondary_urls = reports_data[(reports_data.Pdf_URL.isnull()) & (reports_data['Report Html Address'].notnull())]
         
-        logger.info("URL processing test passed successfully")
+        self.assertEqual(len(primary_urls), 3, "Should find 3 reports with primary URLs")
+        self.assertEqual(len(secondary_urls), 1, "Should find 1 report with secondary URL")
+        
+        logger.info("URL extraction test passed successfully\n")
+        logger.info("--------------------------------------------------\n")
+
+    def test_download_file(self):
+        """Test the download_file method for a single file."""
+        # Create a mock row for a reliable URL
+        mock_row = pd.Series({
+            'Pdf_URL': 'http://cdn12.a1.net/m/resources/media/pdf/A1-Umwelterkl-rung-2016-2017.pdf',
+            'Report Html Address': None
+        })
+        
+        # Create an empty list to capture any errors
+        download_errors = []
+        
+        # Call the download_file method directly
+        self.downloader.download_file('TEST999', mock_row, download_errors)
+        
+        # Check if the file was downloaded successfully
+        downloaded_file = os.path.join(self.download_dir, 'TEST999.pdf')
+        self.assertTrue(os.path.exists(downloaded_file), "File should be downloaded")
+        self.assertGreater(os.path.getsize(downloaded_file), 0, "File should not be empty")
+        
+        # Verify no errors occurred
+        self.assertEqual(len(download_errors), 0, "No errors should occur")
+        
+        logger.info("download_file test passed successfully")
+
+    def test_download_with_error(self):
+        """Test error handling in the download_file method."""
+        # Create a mock row with a broken URL
+        mock_row = pd.Series({
+            'Pdf_URL': 'https://invalid-url-that-wont-work.example/test.pdf',
+            'Report Html Address': None
+        })
+        
+        # Create a list to capture errors
+        download_errors = []
+        
+        # Call the download_file method directly
+        self.downloader.download_file('TEST888', mock_row, download_errors)
+        
+        # Check that the file wasn't downloaded
+        downloaded_file = os.path.join(self.download_dir, 'TEST888.pdf')
+        self.assertFalse(os.path.exists(downloaded_file), "File should not be downloaded")
+        
+        # Verify errors were captured
+        self.assertGreater(len(download_errors), 0, "Errors should be captured")
+        self.assertEqual(download_errors[0], 'TEST888', "Error should reference correct ID")
+        
+        logger.info("download error handling test passed successfully\n")
+        logger.info("--------------------------------------------------\n")
 
     def test_file_download_and_status_tracking(self):
-        """Test actual file downloading and status tracking in output files.
-        
-        This test verifies that:
-        1. Files are actually downloaded from their URLs
-        2. Download status is correctly tracked in the output report
-        """
+        """Test actual file downloading and status tracking in output files."""
         # Run the downloader with the test files
         self.downloader.run()
         
@@ -290,86 +235,114 @@ class PDFDownloaderIntegrationTests(unittest.TestCase):
         status_values = status_df['Status'].astype(str).str.lower()
         
         # Look for success indicators in status
-        has_success = any(status_values.str.contains('success|downloaded|yes'))
+        has_success = any(status_values.str.contains('downloaded'))
         
         # This assertion might fail if all downloads fail (e.g., due to network issues)
         # So we log it but don't make it a hard requirement
         if not has_success:
             logger.warning("No successful downloads found in status report")
             
-        logger.info("File download and status tracking test completed")
+        logger.info("File download and status tracking test completed\n")
+        logger.info("--------------------------------------------------\n")
+
+    def test_create_output_report(self):
+        """Test the create_output_report method."""
+        # Create a test download queue
+        download_queue = pd.DataFrame({
+            'Pdf_URL': ['http://cdn12.a1.net/m/resources/media/pdf/A1-Umwelterkl-rung-2016-2017.pdf', 'http://example.com/test2.pdf'],
+            'Report Html Address': [None, None]
+        }, index=['TEST777', 'TEST778'])
+        
+        self.downloader.download_file('TEST777', download_queue.loc['TEST777'], [])
+
+        # Create a test downloaded file (just one to test both success and failure cases)    
+        #with open(os.path.join(self.download_dir, 'TEST777.pdf'), 'w') as f:
+            #f.write('Test content')
+        
+        # Create error list
+        download_errors = ['TEST778', 'Connection timeout']
+        
+        # Call the method directly
+        self.downloader.create_output_report(download_queue, download_errors)
+        
+        # Check the status report was created
+        status_file = os.path.join(self.output_dir, "Download_Status.xlsx")
+        self.assertTrue(os.path.exists(status_file), "Status report should be created")
+        
+        # Verify contents
+        status_df = pd.read_excel(status_file)
+        self.assertEqual(len(status_df), 2, "Should have 2 status entries")
+        
+        # Find each test ID in the report
+        test777_status = status_df[status_df['Brnum'] == 'TEST777']['Status'].iloc[0]
+        test778_status = status_df[status_df['Brnum'] == 'TEST778']['Status'].iloc[0]
+        
+        self.assertEqual(test777_status, "Downloaded", "TEST777 should show as Downloaded")
+        self.assertEqual(test778_status, "Failed", "TEST778 should show as Failed")
+        
+        logger.info("create_output_report test passed successfully\n")
+        logger.info("--------------------------------------------------\n")
 
     def test_metadata_updating(self):
-        """Test that metadata file is correctly updated after downloads.
+        """Test the update_metadata method directly."""
+        # Create a download queue
+        download_queue = pd.DataFrame({
+            'Pdf_URL': ['http://example.com/test1.pdf', 'http://example.com/test2.pdf'],
+        }, index=['TEST555', 'TEST556'])
         
-        This test verifies that the metadata file is properly updated to
-        reflect the download status of each PDF.
-        """
-        # Make a copy of the original metadata for comparison
-        original_metadata = pd.read_excel(self.metadata_path)
+        # Create source reports data with additional columns
+        reports_data = pd.DataFrame({
+            'Pdf_URL': ['http://example.com/test1.pdf', 'http://example.com/test2.pdf'],
+            'Extra_Column': ['Value1', 'Value2']
+        }, index=['TEST555', 'TEST556'])
         
-        # Run the downloader
-        self.downloader.run()
+        # Create a test downloaded file (just one to test both success and failure cases)
+        with open(os.path.join(self.download_dir, 'TEST555.pdf'), 'w') as f:
+            f.write('Test content')
         
-        # Check that metadata file still exists
-        self.assertTrue(os.path.exists(self.metadata_path), "Metadata file should still exist")
+        # Call the update_metadata method directly
+        self.downloader.update_metadata(download_queue, reports_data)
+        
+        # Verify the metadata file was updated
+        self.assertTrue(os.path.exists(self.metadata_path), "Metadata file should exist")
         
         # Read the updated metadata
         updated_metadata = pd.read_excel(self.metadata_path)
         
-        # Metadata file should have at least the original number of rows
-        self.assertGreaterEqual(len(updated_metadata), len(original_metadata), 
-                               "Updated metadata should have at least as many rows as original")
+        # Find the test entries in the metadata
+        test555_entry = updated_metadata[updated_metadata['BRnum'] == 'TEST555']
+        test556_entry = updated_metadata[updated_metadata['BRnum'] == 'TEST556']
         
-        # Check if any 'No' values were updated to 'Yes' or contain status information
-        if 'pdf_downloaded' in updated_metadata.columns:
-            updated_statuses = updated_metadata['pdf_downloaded'].astype(str)
-            original_nos = original_metadata['pdf_downloaded'].astype(str).str.lower() == 'no'
-            
-            # Count changes from 'No' to something else
-            changes = 0
-            for i, was_no in enumerate(original_nos):
-                if was_no and i < len(updated_statuses):
-                    if updated_statuses.iloc[i].lower() != 'no':
-                        changes += 1
-            
-            # If no changes, log a warning but don't fail the test
-            # (might happen if downloads fail due to network issues)
-            if changes == 0:
-                logger.warning("No metadata status changes detected")
-            else:
-                logger.info(f"Detected {changes} metadata status updates")
+        # Verify entries exist
+        self.assertGreater(len(test555_entry), 0, "TEST555 should be in metadata")
+        self.assertGreater(len(test556_entry), 0, "TEST556 should be in metadata")
         
-        logger.info("Metadata updating test completed")
+        # Verify download status
+        self.assertEqual(test555_entry['pdf_downloaded'].iloc[0], 'Yes', "TEST555 should be marked as downloaded")
+        self.assertEqual(test556_entry['pdf_downloaded'].iloc[0], 'No', "TEST556 should be marked as not downloaded")
+        
+        logger.info("update_metadata test passed successfully\n")
+        logger.info("--------------------------------------------------\n")
 
     def test_comprehensive_workflow(self):
-        """Test the complete workflow from reading files to updating metadata.
-        
-        This is an end-to-end test that verifies the entire process works correctly:
-        1. Reading input files
-        2. Processing URLs
-        3. Downloading PDFs
-        4. Updating status information
-        5. Generating output reports
-        """
+        """Test the complete workflow from reading files to updating metadata."""
         # Create a comprehensive test with multiple cases
         comprehensive_data = {
             'BRnum': ['COMP001', 'COMP002', 'COMP003', 'COMP004', 'COMP005'],
             'Pdf_URL': [
-                'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',  # Should succeed
+                'http://cdn12.a1.net/m/resources/media/pdf/A1-Umwelterkl-rung-2016-2017.pdf',  # Should succeed
                 'https://invalid-url-that-wont-work.example/test.pdf',  # Should fail
                 None,  # Missing URL
-                'https://www.adobe.com/pdf/pdfs/ISO32000-1PublicPatentLicense.pdf',  # Should succeed
+                'https://www.hkexnews.hk/listedco/listconews/sehk/2017/0512/ltn20170512165.pdf',  # Should succeed
                 'not-a-valid-url'  # Invalid format
             ],
             'Report Html Address': [
                 None,
                 None,
-                'https://www.w3.org/TR/WCAG20/',  # HTML instead of PDF
+                'https://ebooks.exakta.se/aak/2017/hallbarhetsrapport_2016_2017_en/pubData/source/aak_sustainability_report_2016_2017_ebook.pdf',  # HTML instead of PDF
                 None,
                 None
             ],
-            'Year': [2020, 2021, 2022, 2023, 2024]
         }
         
         # Create the comprehensive test file
@@ -385,7 +358,6 @@ class PDFDownloaderIntegrationTests(unittest.TestCase):
         pd.DataFrame({
             'BRnum': ['COMP001', 'COMP003'],
             'pdf_downloaded': ['No', 'No'],
-            'Year': [2020, 2022]
         }).to_excel(comp_metadata_path, index=False)
         self.downloader.metadata_path = comp_metadata_path
         
@@ -433,7 +405,17 @@ class PDFDownloaderIntegrationTests(unittest.TestCase):
             self.assertTrue(comp001_status_str == 'yes' or 'success' in comp001_status_str,
                            f"COMP001 should show successful download, found: {comp001_status}")
         
-        logger.info("Comprehensive workflow test completed successfully")
+        logger.info("Comprehensive workflow test completed successfully\n")
+        logger.info("--------------------------------------------------\n")
+
+    def tearDown(self):
+        """Clean up after tests by removing test files and directories."""
+        try:
+            # Remove test directories
+            shutil.rmtree(self.test_dir, ignore_errors=True)
+            logger.info(f"Test cleanup: Removed test directory {self.test_dir}")
+        except Exception as e:
+            logger.warning(f"Test cleanup failed: {e}")
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)  # Run tests with detailed output
